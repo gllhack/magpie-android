@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_bg_top">#1B1916</color>
+    <color name="app_bg">#131210</color>
+    <color name="app_bar">#211F1C</color>
+    <color name="app_bar_alt">#292622</color>
+    <color name="app_surface">#211F1C</color>
+    <color name="app_surface_alt">#2C2925</color>
+    <color name="app_line">#3A352F</color>
+    <color name="text_primary">#F5EFE7</color>
+    <color name="text_secondary">#C3BAB0</color>
+    <color name="text_muted">#91877C</color>
+    <color name="text_on_accent">#1C120D</color>
+    <color name="accent">#F08A5B</color>
+    <color name="accent_pressed">#FF9D72</color>
+    <color name="accent_soft">#3B2419</color>
+    <color name="status_ok">#73CF98</color>
+    <color name="status_off">#756D64</color>
+    <color name="status_error">#F08B84</color>
+    <color name="switch_off">#655D55</color>
+    <color name="switch_thumb_off">#C3BAB0</color>
+    <color name="menu_ripple">#33F08A5B</color>
+</resources>

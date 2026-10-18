@@ -1,0 +1,22 @@
+# Keep the scripts' line endings usable on the systems that run them:
+# PowerShell and the Gradle wrapper on Windows, the wrapper and the shell
+# helpers on Linux and macOS. Text is stored as LF and checked out as LF,
+# so a Linux clone's gradlew stays a shell script Windows did not rewrite.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF when checked out there.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaries: no line-ending conversion, no text diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.zip binary
+*.jar binary
+*.so binary
+*.apk binary

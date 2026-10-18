@@ -1,0 +1,31 @@
+# Android/Gradle build output: everything here is made again by
+# scripts/build-apk.ps1.
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.apk
+*.aab
+
+# The gateway and Bun binaries the build script fetches and compiles:
+# 267 MB of .so files, all of it reproducible from upstream and the Bun
+# release the script pins by SHA-256.
+android/app/src/main/jniLibs/
+
+# The build script's downloads (Bun zips) and the Go build's own output.
+android/build/bun-cache/
+upstream/build/
+
+# IDE and OS noise.
+.idea/
+.vs/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local logs and scratch files.
+*.log
+tmp/

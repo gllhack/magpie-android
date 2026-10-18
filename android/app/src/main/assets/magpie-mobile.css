@@ -1,0 +1,641 @@
+/* magpie on the phone — the app's own skin over magpie's page.
+ *
+ * The page itself is magpie's, served by the gateway this app runs, so this
+ * file is injected into the WebView after every load (see MainActivity) and
+ * magpie's own assets are left alone. It does three things: it paints the
+ * page in the app's warm palette, it gives the header the room a thumb needs
+ * on a narrow screen, and it turns what the desktop shows as a popover — a
+ * dialog, the model picker — into a sheet that comes up from the floor.
+ */
+
+/* ---- palette: the app's own, day and night ------------------------------- */
+:root {
+  --bg: #f3eee7;
+  --card: #fffdf9;
+  --card-2: #f7f2ea;
+  --pill: #ebe3d8;
+  --pill-hover: #e2d8ca;
+  --seg-track: #e7ded1;
+  --seg-thumb: #fffdf9;
+  --seg-edge: 0 1px 2px rgba(33, 29, 25, .13), 0 0 0 .5px rgba(33, 29, 25, .06);
+  --nav-thumb-edge: inset 0 0 0 1px #e5dcd1, 0 1px 2px rgba(48, 36, 26, .05);
+  --ctl-fg: #6b6157;
+  --line: #e5dcd1;
+  --line-2: #efe7dc;
+  --fg: #211d19;
+  --fg-2: #4a423b;
+  --muted: #8b8177;
+  --faint: #b6ab9e;
+  --accent: #c4512a;
+  --accent-soft: #f9e6dc;
+  --accent-fg: #fff9f3;
+  --sel: #f7e2d6;
+  --green: #267a4e;
+  --green-soft: #e2f2e8;
+  --red: #c4433e;
+  --red-soft: #fbe9e6;
+  --amber: #a9651a;
+  --amber-soft: #faeedd;
+  --pop-bg: rgba(255, 253, 249, .97);
+  --shadow: 0 18px 46px rgba(48, 36, 26, .18), 0 2px 8px rgba(48, 36, 26, .07), 0 0 0 .5px rgba(48, 36, 26, .08);
+  --font: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --code: ui-monospace, "JetBrains Mono", "Roboto Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131210;
+    --card: #211f1c;
+    --card-2: #1b1916;
+    --pill: #2c2925;
+    --pill-hover: #37332e;
+    --seg-track: rgba(255, 255, 255, .05);
+    --seg-thumb: rgba(255, 255, 255, .13);
+    --seg-edge: inset 0 .5px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .32);
+    --nav-thumb-edge: inset 0 .5px 0 rgba(255, 255, 255, .1), 0 1px 2px rgba(0, 0, 0, .3);
+    --ctl-fg: #b4aaa0;
+    --line: #3a352f;
+    --line-2: #302c27;
+    --fg: #f5efe7;
+    --fg-2: #c3bab0;
+    --muted: #91877c;
+    --faint: #6a625a;
+    --accent: #f08a5b;
+    --accent-soft: #3b2419;
+    --accent-fg: #1c120d;
+    --sel: #3a2a20;
+    --green: #73cf98;
+    --green-soft: #1e3527;
+    --red: #f08b84;
+    --red-soft: #3d2320;
+    --amber: #e9b15f;
+    --amber-soft: #3a2c17;
+    --pop-bg: rgba(33, 31, 28, .97);
+    --shadow: 0 18px 46px rgba(0, 0, 0, .6), 0 2px 8px rgba(0, 0, 0, .34), 0 0 0 .5px rgba(255, 255, 255, .09);
+    --logo-invert: 1;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131210;
+  --card: #211f1c;
+  --card-2: #1b1916;
+  --pill: #2c2925;
+  --pill-hover: #37332e;
+  --seg-track: rgba(255, 255, 255, .05);
+  --seg-thumb: rgba(255, 255, 255, .13);
+  --seg-edge: inset 0 .5px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .32);
+  --nav-thumb-edge: inset 0 .5px 0 rgba(255, 255, 255, .1), 0 1px 2px rgba(0, 0, 0, .3);
+  --ctl-fg: #b4aaa0;
+  --line: #3a352f;
+  --line-2: #302c27;
+  --fg: #f5efe7;
+  --fg-2: #c3bab0;
+  --muted: #91877c;
+  --faint: #6a625a;
+  --accent: #f08a5b;
+  --accent-soft: #3b2419;
+  --accent-fg: #1c120d;
+  --sel: #3a2a20;
+  --green: #73cf98;
+  --green-soft: #1e3527;
+  --red: #f08b84;
+  --red-soft: #3d2320;
+  --amber: #e9b15f;
+  --amber-soft: #3a2c17;
+  --pop-bg: rgba(33, 31, 28, .97);
+  --shadow: 0 18px 46px rgba(0, 0, 0, .6), 0 2px 8px rgba(0, 0, 0, .34), 0 0 0 .5px rgba(255, 255, 255, .09);
+  --logo-invert: 1;
+}
+
+/* ---- the shelf ----------------------------------------------------------- */
+body.web {
+  -webkit-tap-highlight-color: transparent;
+  font-size: 14px;
+  overscroll-behavior: none;
+}
+/* a phone draws no bar beside a scrolling list: the edge is the page's */
+body.web ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+body.web :focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (max-width: 1000px), (pointer: coarse) {
+  /* ---- the header: the app's own bar above already carries the name, so
+     the page's is only its controls, in one row a thumb can work — the tabs
+     slide sideways under it and the two icons stay where they are ---------- */
+  body.web .top {
+    height: auto;
+    min-height: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    padding: calc(9px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 9px max(12px, env(safe-area-inset-left));
+    background: var(--bg);
+  }
+  body.web .top .brand,
+  body.web .top #sideToggle,
+  body.web .top .crumb {
+    display: none;
+  }
+  /* an update is the app's own business, not this page's: the binary the
+     gateway runs is the one inside the APK */
+  body.web .top .update-wrap {
+    display: none;
+  }
+  body.web .top #nav {
+    /* still relative: the tab strip's own thumb is placed in it */
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scroll-padding: 0 12px;
+  }
+  /* the tabs run off the edge rather than squeeze: the edge that has more
+     of them fades, so the row reads as one a thumb can push sideways
+     (magpie-mobile.js marks which edge, this only draws it) */
+  body.web .top #nav[data-edge="end"] {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent);
+  }
+  body.web .top #nav[data-edge="start"] {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 30px);
+    mask-image: linear-gradient(to right, transparent, #000 30px);
+  }
+  body.web .top #nav[data-edge="both"] {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 30px, #000 calc(100% - 30px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 30px, #000 calc(100% - 30px), transparent);
+  }
+  body.web .top #nav .nav-gl {
+    display: none;
+  }
+  body.web .top #nav button {
+    flex: none;
+    height: 40px;
+    padding: 0 15px;
+    border-radius: 13px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--muted);
+    scroll-snap-align: center;
+  }
+  body.web .top #nav button.on {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  body.web .top #nav > .thumb {
+    border-radius: 13px;
+    background: var(--seg-thumb);
+    box-shadow: var(--nav-thumb-edge);
+  }
+  body.web .top .actions {
+    order: 2;
+    flex: none;
+    gap: 6px;
+    min-height: 0;
+    margin-left: 0;
+  }
+  body.web .top .actions .icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    color: var(--fg-2);
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  body.web .top .actions .icon:active {
+    color: var(--fg);
+    background: var(--pill);
+  }
+
+  /* ---- the pages: cards with room, and targets a finger can hit --------- */
+  body.web .view {
+    padding: 4px 12px calc(16px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  body.web .list {
+    border-radius: 18px;
+    box-shadow: 0 1px 3px rgba(48, 36, 26, .05);
+  }
+  body.web .row {
+    min-height: 58px;
+    padding: 10px 14px;
+    gap: 12px;
+  }
+  body.web .row .ic {
+    width: 22px;
+    height: 22px;
+  }
+  body.web .row .name {
+    font-size: 14.5px;
+    font-weight: 550;
+  }
+  body.web .row .sub {
+    font-size: 12px;
+  }
+  body.web .row-head {
+    min-height: 38px;
+    margin-top: 8px;
+  }
+  body.web .label {
+    font-size: 11.5px;
+    letter-spacing: .1em;
+  }
+  body.web .empty-state {
+    padding: 44px 20px;
+  }
+  body.web .text,
+  body.web .copy,
+  body.web .field,
+  body.web .chip,
+  body.web .sess-pick {
+    border-radius: 12px;
+  }
+  body.web .text.action,
+  body.web .text.primary {
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 13px;
+    font-weight: 600;
+  }
+  /* a setting's own switch reads as pills, not as 22px of small print */
+  body.web .segs {
+    padding: 3px;
+    border-radius: 13px;
+  }
+  body.web .opt {
+    height: 38px;
+    padding: 0 15px;
+    border-radius: 10px;
+    font-size: 13.5px;
+  }
+  body.web .segs .thumb {
+    border-radius: 10px;
+  }
+  /* Settings' own tabs, which the desktop fits on one line */
+  body.web .set-head {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+  body.web .warm-tabs,
+  body.web .set-tabs {
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0 -12px;
+    padding: 2px 12px 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  body.web .warm-tabs button,
+  body.web .set-tabs button {
+    flex: none;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  body.web .warm-tabs button.on,
+  body.web .set-tabs button.on {
+    color: var(--accent-fg);
+    background: var(--accent);
+    box-shadow: none;
+  }
+
+  /* ---- Plugins: the builds that carry no Bun --------------------------- */
+  /* The external plugins the page offers (Plugins › Discover / Installed)
+     are npm packages magpie runs on Bun, so a build that did not pack Bun
+     can only fail those installs: the row of tabs gets one notice, and its
+     own action buttons are left inert. magpie-mobile.js adds all of it, and
+     only when the shell says window.magpieBun === false; a build with Bun is
+     left exactly as upstream drew it. Built-in's switches are untouched. */
+  body.web .mg-no-bun-note {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 0 0 2px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--amber-soft);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+  /* the skin's own accent, as the notice is a caution and not an error */
+  body.web .mg-no-bun-note b {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--fg);
+  }
+  body.web .mg-no-bun-note b::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+  body.web .mg-no-bun-note span {
+    color: var(--fg-2);
+  }
+  /* in the detail sheet the notice sits between the head and the readme */
+  body.web .mg-no-bun-note.mg-no-bun-sheet {
+    margin: 0 18px 12px;
+  }
+  /* an action the phone can't carry out: still shown, so the page reads as
+     the page, but quiet and untouchable */
+  body.web #view-plugins .mg-no-bun,
+  body.web .pm-dact .mg-no-bun {
+    pointer-events: none;
+    opacity: .5;
+  }
+
+  /* ---- Plugins: the package Bun's Android build can't unpack ------------ */
+  /* zcode-provider resolves its tree and then makes Bun die on Android
+     ("bad system call"); the note is drawn beside the form or the error so
+     the raw message isn't read as a broken app. magpie-mobile.js adds it
+     only under window.magpieAndroid and only for that package. */
+  body.web .mg-zcode-note {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--fg-2);
+  }
+  body.web .pm-manual .mg-zcode-note {
+    padding: 8px 11px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--amber-soft);
+  }
+  body.web #status .mg-zcode-note {
+    font-size: inherit;
+  }
+
+  /* ---- adding a provider: the vendor tiles, two to a line --------------- */
+  /* the button under the list keeps its room on a desktop so nothing jumps
+     when the sheet steps it aside; on a phone the room is the first thing
+     the reader sees, and it is empty */
+  body.web #view-providers .after-list.away {
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  body.web .sheet {
+    padding: 4px 0 12px;
+  }
+  body.web .sheet .row-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 0;
+    margin-top: 0;
+    padding: 0;
+  }
+  /* the sheet's own name and its search each take a line of their own:
+     squeezed side by side they were two words and a 160px field */
+  body.web .sheet .row-head .label {
+    flex: 1 0 100%;
+  }
+  body.web .sheet .row-head .grow {
+    display: none;
+  }
+  body.web .sheet .find {
+    flex: 1 1 130px;
+    width: auto;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 13px;
+    font-size: 14px;
+  }
+  body.web .sheet .row-head .text {
+    flex: none;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 13px;
+    font-size: 13.5px;
+  }
+  body.web .sheet .kind {
+    gap: 6px;
+    padding: 18px 2px 8px;
+  }
+  body.web .sheet .kind b {
+    font-size: 13.5px;
+  }
+  body.web .sheet .kind span {
+    font-size: 12px;
+  }
+  body.web .sheet .grid {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 8px;
+  }
+  body.web .sheet .tile {
+    height: 46px;
+    padding: 0 12px;
+    border-radius: 13px;
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  /* a finger leaves its hover behind: the press is what shows */
+  body.web .sheet .tile:hover {
+    background: var(--card);
+  }
+  body.web .sheet .tile:active {
+    background: var(--pill);
+  }
+  body.web .sheet .tile.on {
+    background: var(--sel);
+  }
+  body.web .sheet .tile .ic {
+    width: 20px;
+    height: 20px;
+  }
+  body.web .sheet .tile .nm {
+    font-size: 13.5px;
+    font-weight: 550;
+  }
+  body.web .sheet .custom-foot {
+    margin-top: 18px;
+    padding: 12px 0 0;
+  }
+  body.web .sheet .custom-foot .custom {
+    height: 40px;
+    padding: 0 14px 0 10px;
+    border-radius: 12px;
+    font-size: 13.5px;
+  }
+  body.web .sheet .custom-foot .hint {
+    font-size: 12px;
+  }
+
+  /* ---- what the desktop pops over the page comes up from the floor ------- */
+  body.web .modal,
+  body.web .modal.held {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+    background: rgba(28, 20, 15, .42);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+  body.web .modal .dialog {
+    width: 100%;
+    max-width: 100%;
+    /* app.js holds a dialog where it opened (app.css: .modal.held) by
+       writing a top and a max-height in pixels; those pixels are the
+       desktop's, where the dialog opens under the row that was pressed.
+       At the floor they would push it past the foot of the screen */
+    top: 0 !important;
+    max-height: calc(100% - 10px) !important;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 40px rgba(28, 20, 15, .3);
+    animation: sheet-up .26s cubic-bezier(.22, 1, .36, 1);
+  }
+  /* a sheet the app's own sheets would draw: the little bar that says it came
+     up from the floor (the native menu, settings and log have the same one) */
+  body.web .modal .dialog::before,
+  body.web .pop::before {
+    content: "";
+    flex: none;
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 9px auto 3px;
+    border-radius: 999px;
+    background: var(--line);
+  }
+  body.web .pop::before {
+    margin: 8px auto 0;
+  }
+  body.web .modal .editor.framed > .ehead,
+  body.web .modal .editor.framed > .bar {
+    min-height: 58px;
+  }
+  /* a picker — a model, an effort, a row's menu — is a sheet of its own, and
+     app.js places it in pixels, so its place here is the one that wins */
+  body.web .pop {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(74vh, 640px) !important;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: 22px 22px 0 0;
+    transform-origin: 50% 100% !important;
+    box-shadow: 0 -10px 40px rgba(28, 20, 15, .3);
+    animation: sheet-up .24s cubic-bezier(.22, 1, .36, 1);
+  }
+  body.web .pop .search {
+    padding: 2px 14px 0;
+  }
+  body.web .pop input {
+    height: 46px;
+    font-size: 15px;
+  }
+  body.web .pop ul {
+    padding: 8px 6px;
+  }
+  body.web .pop li,
+  body.web .pop.model-picker li:not(.group) {
+    height: 48px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+  body.web .pop li .ic {
+    width: 18px;
+    height: 18px;
+  }
+  body.web .pop.model-picker li .v {
+    max-width: none;
+    font-size: 14px;
+  }
+  body.web .pop.model-picker li .n {
+    font-size: 11.5px;
+  }
+  body.web .pop.explained li {
+    height: auto;
+    padding: 10px 12px;
+  }
+  body.web .pop li .favorite,
+  body.web .pop li .fast {
+    width: 34px;
+    height: 34px;
+  }
+  body.web #pickerRail {
+    width: 52px;
+    padding: 8px 6px;
+  }
+  body.web .rail-item,
+  body.web .rail-thumb {
+    width: 40px;
+    height: 40px;
+  }
+  body.web .rail-thumb {
+    left: 6px;
+  }
+  body.web .effort-control {
+    padding: 14px 16px 12px;
+  }
+  body.web .effort-track,
+  body.web .effort-control input[type="range"] {
+    height: 30px;
+  }
+
+  /* ---- the foot: one quiet line under the page ------------------------- */
+  body.web .foot {
+    justify-content: center;
+    gap: 10px;
+    min-height: 0;
+    padding: 6px max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    background: var(--bg);
+  }
+  body.web .foot .status {
+    font-size: 12.5px;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(20px);
+    opacity: .55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.web .modal .dialog,
+  body.web .pop {
+    animation: none;
+  }
+}
