@@ -13,25 +13,6 @@ Termux 那套路径），外面套一层很小的安卓壳子：一个前台服�
 密钥。arm64（手机）那份由同一套脚本和 NDK 编出，二进制检查过是合法的安卓 AArch64 PIE，
 但没有在真机上跑过——真机上如果遇到问题，先看菜单里的日志。
 
-## 长什么样
-
-`screenshots/` 里是模拟器上截的图：主界面（magpie 网页跑在 WebView 里）、顶栏菜单、
-设置弹窗（网关端口 3425、网页端口 3430）、深色模式和插件页（三个社区插件已装好，
-OpenCode Zen Free 已登录）。
-
-界面是照着手机做的：暖色纸张调色板、底部弹层（菜单、设置、日志都从下面滑上来）、
-导航标签条能横向滑动、选中项是白色胶囊。深色模式跟着系统走，切换时原生外壳和网页
-同时变色，网页不用重新加载。
-
-## 界面是怎么改的
-
-magpie 的网页界面内嵌在网关卡里，改不了它的源码，所以壳子在网页加载时把两个文件注入
-进去：`android/app/src/main/assets/magpie-mobile.css`（配色、圆角、底部弹层、手机排版）
-和 `magpie-mobile.js`（标签条滑动边缘、选中标签滚进视野、插件页的说明等）。
-`upstream/` 依旧没有任何改动。
-
-原生那一侧（顶栏、菜单、设置、日志）在 `android/app/src/main/res/` 里，配色写在
-`values/colors.xml` 和 `values-night/colors.xml` 两份，日夜两套一眼能对上。
 
 ## 目录
 
@@ -48,9 +29,6 @@ magpie 的网页界面内嵌在网关卡里，改不了它的源码，所以壳�
 - **Android NDK r28c**（只在编译网关时用，Gradle 不依赖它）
 - **Go 1.26.8**：`upstream/go.mod` 要求这个版本，本机版本低的话 Go 会自己下载
   （脚本默认把 `GOPROXY` 设成 `goproxy.cn`）
-
-NDK 不必放进 SDK，脚本会自己找：`-Ndk` 参数、`ANDROID_NDK_HOME`、SDK 的 `ndk/` 目录、
-`~/sdk/android-ndk-*` 都能认出来。
 
 ```powershell
 # 只下载这一次，713 MB
@@ -101,24 +79,6 @@ adb install -r android\app\build\outputs\apk\release\app-release.apk
 网关和网页界面是同一个进程。进程意外退出会自动重启（逐次退避），界面重连上之后也会
 自己把网页加载出来。
 
-## 插件与内置 Bun
-
-magpie 的外部插件就是一个个 npm 包，跑它们的是 Bun。上游默认在第一次用到时把 Bun 下载到
-应用自己的私有目录里，但 Android 10 以后不允许执行私有目录里的文件（W^X），插件一装就报
-`fork/exec ... permission denied`——安装、更新、移除全都不行。这就是自己打的 APK 里插件
-装不上的原因。
-
-解决办法是把 Bun 一起打进 APK：构建脚本把 Bun 1.4.2 的二进制放到
-`android/app/src/main/jniLibs/<abi>/libmagpiebun.so`——能执行的只有 `lib/<abi>/` 下的
-`.so`，`extractNativeLibs` 还得开着，和网关二进制是同一条规矩（见“为什么编译网关要用
-NDK”）。应用拉起网关时会把它的绝对路径写进环境变量 `MAGPIE_BUN`，日志里有这么一行：
-
-```text
-plugins run on the bundled Bun: /data/app/.../lib/<abi>/libmagpiebun.so
-```
-
-实测：在 Plugins → Discover 点 Factory 的 Install，页头计数从 `Installed · 1` 变成
-`Installed · 2`，卡片按钮变成 Sign in，日志里那行也出现——插件安装链路整个通了。
 
 ### 登录和外部链接
 
@@ -199,58 +159,6 @@ magpie 优先用它，所以不需要改上游代码。
 想开机自动起来，就在设置里打开 **开机自动启动**。部分国产 ROM 还会额外清后台，需要在系统
 的电池/自启动白名单里再放行一次。
 
-## 为什么编译网关要用 NDK
-
-Go 自带那套 DNS 解析在 Android 上不工作（[golang/go#10714](https://github.com/golang/go/issues/10714)：
-它去读 Android 根本没有的 `/etc/resolv.conf`，最后退化成只问本机 53 端口），结果就是
-`CGO_ENABLED=0` 编出来的二进制能启动、能监听，但**任何域名都解析不了**，网关一联外网就废。
-
-所以脚本用 `CGO_ENABLED=1` 加 NDK 的 clang 来编，DNS 走 Android 自己的 bionic 和 netd，
-和 Termux 里装 magpie 是同一条路（上游 Makefile 也是这么写的）。这条是实测确认的：cgo 版本
-在设备上 `sync` 能拉到 models.dev 的目录，`CGO_ENABLED=0` 的版本直接报 DNS 错误。
-
-另一个安卓特有的点：APK 里能执行的二进制只能放在 `lib/<abi>/` 下，后缀必须是 `.so`，而且
-`extractNativeLibs` 得是开的。所以脚本把 magpie 编成
-`android/app/src/main/jniLibs/<abi>/libmagpie.so`，应用再从 `nativeLibraryDir` 里执行它。
-magpie 要写的东西（配置、缓存、日志）通过 `HOME` 和 `XDG_*` 变量全指到应用自己的 `files/`
-目录，和 Docker 里那套做法一样，不会碰手机别的目录。
-
-## 常见问题
-
-**编译时说找不到 NDK** — 按上面下载解压，或用 `-Ndk C:\android-ndk-r28c` 指过去。
-
-**Gradle 抱怨 SDK 路径** — 脚本会往 `android/local.properties` 写 `sdk.dir`；用 Android
-Studio 打开工程时它也会自己写。
-
-**APK 莫名其妙比 268 MB 大很多** — 排除 Bun（约 176 MB，见“插件与内置 Bun”；`-NoBun`
-或只编一个架构都能瘦下来）之后还是异常大，就是改过架构或打包设置，先清一次：
-`cd android; .\gradlew.bat clean assembleDebug`。增量打包偶尔会把上一版的大二进制留在
-APK 的空隙里（实测出现过多出 48 MB 的情况），清一次就正常了。
-
-**装上去提示“应用未安装”** — 看设备架构：手机用 arm64-v8a 那份，模拟器是 Intel/AMD 镜像
-就用 x86_64。两个都在 APK 里，不用自己挑。
-
-**WebView 白屏、提示界面没有加载成功** — 菜单里看日志。网页要等网关起来，第一次大概几秒；
-日志里出现 `magpie web on http://127.0.0.1:3430/?k=…` 就说明好了。
-
-**插件页显示“本次构建未内置插件运行时”、外部插件按钮是灰的** — 这个 APK 打包时没带上
-Bun：用了 `-NoBun`，或者下载 Bun 那一步失败了（构建日志里会有 `no source had Bun 1.4.2
-for <abi>; leaving plugins off this build` 这行）。重新打包时去掉 `-NoBun` 就行，上不了
-GitHub 就用 `-BunMirror` 指一个能用的镜像。内置插件不受影响。
-
-**插件安装失败、或者一直转圈** — 插件是 npm 包，默认从 npm 官方源拉，国内经常拉不动：把
-Plugins 页上的 **Mirrors in China**（中文界面叫“国内镜像”）开关打开，magpie 就会走国内
-镜像。还不行就看菜单里的“查看日志”——先确认这个包带了 Bun（有 `plugins run on the
-bundled Bun: …` 这行），再顺着日志看是哪个包、哪一步在报错。
-
-**点插件的 Sign in 没反应** — 这个 APK 是旧版壳子时才会发生（`window.open` 被 WebView
-丢掉了）；现在的版本会把厂商登录页交给手机浏览器打开，登录完切回 magpie 即可。如果浏览器
-都没起来，说明手机没装浏览器，或者默认浏览器被禁用了。
-
-**装 `zcode-provider` 报 `signal: bad system call`** — 这不是权限问题，是 Bun 1.4.2 的
-安卓版在解包这个包时自己崩了（退出码 159）。它也不是 magpie 的登录插件，是另一个 agent
-的 pi 包；换成 `@magpie-community/opencode-zcode-auth` 即可，ZCode 的 Z.ai / BigModel /
-API key 三条登录方式在手机上都验证过。
 
 **想改支持的安卓版本** — 改 `android/app/build.gradle.kts`：`minSdk` 现在是 36
 （Android 16），往下调低也可以，壳子代码没用到更新的 API；`compileSdk`/`targetSdk` 是 36，
@@ -276,17 +184,7 @@ MAGPIE_ADDR=127.0.0.1:3425 ./build/magpie serve
 代价是要自己管前台进程和开机启动，Termux 一被杀网关就没了。打包成 APK 之后，网关有常驻
 通知、崩溃自启，网页界面也有地方点，日常用更省心。
 
-## 代码在哪
 
-- 启动与界面：`android/app/src/main/java/com/magpie/android/MainActivity.java`
-- 拉起网关进程、环境变量、日志、崩溃重启：
-  `android/app/src/main/java/com/magpie/android/MagpieGateway.java`
-- 前台服务与通知：`android/app/src/main/java/com/magpie/android/MagpieService.java`
-- 端口、局域网、开机启动、网页密钥的存取：
-  `android/app/src/main/java/com/magpie/android/MagpiePrefs.java`
-- 注入网页的手机皮肤与脚本：
-  `android/app/src/main/assets/magpie-mobile.css`、`magpie-mobile.js`
-- 图标生成脚本：`scripts/gen-icons/main.go`
 - 插件要用的 Bun（构建时放进来的）：`android/app/src/main/jniLibs/<abi>/libmagpiebun.so`
 
 magpie 自己的一切（网关、网页、各个 agent 的适配）都在 `upstream/` 里。壳子不碰它，只负责
